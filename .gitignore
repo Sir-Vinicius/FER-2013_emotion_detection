@@ -1,9 +1,5 @@
 .ipynb_checkpoints
 archive
 
-X_test_landmarks.npy
 X_test_landmarks.parquet
-X_train_landmarks.npy
 X_train_landmarks.parquet
-y_test_labels.npy
-y_train_labels.npy
