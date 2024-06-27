@@ -1,5 +1,5 @@
 .ipynb_checkpoints
 archive
 
-X_test_landmarks.parquet
-X_train_landmarks.parquet
+test_landmarks.parquet
+train_landmarks.parquet
