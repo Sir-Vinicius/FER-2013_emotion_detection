@@ -8,7 +8,7 @@
 </head>
 <body>
     <h1>Upload an Image</h1>
-    <form id="upload-form" action="/predict" method="post" enctype="multipart/form-data">
+    <form id="upload-form" action="/predict-image" method="post" enctype="multipart/form-data">
         <input type="file" id="file-input" name="file" accept=".jpg, .jpeg, .png" required>
         <button type="submit">Upload</button>
     </form>
@@ -41,8 +41,21 @@
                 var formData = new FormData();
                 formData.append('file', file);
 
-                
-                fetch('/predict', {
+                // Função de mapeamento de emoções
+                function mapEmotionName(emotionNumber) {
+                    const emotionMap = {
+                    0: 'angry',
+                    1: 'sad',
+                    2: 'surprise',
+                    3: 'happy'
+                    };
+                    
+                    return emotionMap[emotionNumber];
+                }
+  
+
+
+                fetch('/predict-image', {
                     method: 'POST',
                     body: formData
                 })
@@ -53,13 +66,15 @@
                     return response.json();
                 })
                 .then(data => {
-                    var emotion = data.emotion;
-                    resultDiv.innerHTML = `<p>Detected emotion: ${emotion}</p>`;
+                    var emotionName = data.emotion;
+                    resultDiv.innerHTML = `<p>Detected emotion: ${emotionName}</p>`;
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     resultDiv.innerHTML = '<p>Error detecting emotion.</p>';
                 });
+                
+                  
 
             };
 

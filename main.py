@@ -28,27 +28,30 @@ mp_face_mesh = mp.solutions.face_mesh.FaceMesh(
     refine_landmarks=True,
     min_detection_confidence=0.5)
 
-# # Definir pontos de interesse
-# points_of_interest = [list(range(10, 14)),  # Lábios
-#                       list(range(468, 478)),  # Olho esquerdo
-#                       list(range(249, 259)),  # Olho direito
-#                       [21, 54, 103, 67, 109, 10, 338, 297, 332, 284, 251],  # Linhas da testa
-#                       [71, 68, 104, 69, 108, 151, 337, 299, 333, 298, 301, 9],  # Linhas da testa
-#                       [143, 111, 117, 118, 119, 120, 121, 128, 245],  # Linhas rosto parte direita
-#                       [214, 207, 205, 36, 142, 126, 217, 174],  # Linhas rosto parte direita
-#                       [372, 340, 346, 347, 348, 349, 350, 357, 465],  # Linhas rosto parte esquerda
-#                       [434, 427, 425, 266, 371, 355, 437, 399]  # Linhas rosto parte esquerda
-#                      ]
+# Definir pontos de interesse
+points_of_interest = [list(range(10, 14)),  # Lábios
+                      list(range(468, 478)),  # Olho esquerdo
+                      list(range(249, 259)),  # Olho direito
+                      [21, 54, 103, 67, 109, 10, 338, 297, 332, 284, 251],  # Linhas da testa
+                      [71, 68, 104, 69, 108, 151, 337, 299, 333, 298, 301, 9],  # Linhas da testa
+                      [143, 111, 117, 118, 119, 120, 121, 128, 245],  # Linhas rosto parte direita
+                      [214, 207, 205, 36, 142, 126, 217, 174],  # Linhas rosto parte direita
+                      [372, 340, 346, 347, 348, 349, 350, 357, 465],  # Linhas rosto parte esquerda
+                      [434, 427, 425, 266, 371, 355, 437, 399]  # Linhas rosto parte esquerda
+                     ]
 
 # # Função para extrair pontos de interesse
-# def extract_points_of_interest(landmarks):
-#     selected_points = []
-#     for group in points_of_interest:
-#         for idx in group:
-#             selected_points.extend([landmarks[idx].x, landmarks[idx].y, landmarks[idx].z])
-#     return np.array(selected_points).reshape(1, -1)
+def extract_points_of_interest(landmarks):
+    selected_points = []
+    for group in points_of_interest:
+        for idx in group:
+            selected_points.extend([landmarks[idx].x, landmarks[idx].y, landmarks[idx].z])
+    return np.array(selected_points).reshape(1, -1)
 
-# Endpoint para servir a página HTML
+# Mapeamento de emoções
+emotion_to_num = {'angry': 0, 'sad': 1, 'surprise': 2, 'happy': 3}
+
+# Endpoint Index
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     file_path = os.path.join(os.getcwd(), "static", "pages", "index.html")
@@ -56,7 +59,7 @@ async def read_root():
         return HTMLResponse(content=f.read(), status_code=200)
 
 # Endpoint para upload de imagem
-@app.post("/predict/")
+@app.post("/predict-image/")
 async def upload_image(file: UploadFile = File(...)):
     contents = await file.read()
     npimg = np.fromstring(contents, np.uint8)
@@ -66,28 +69,31 @@ async def upload_image(file: UploadFile = File(...)):
     results = mp_face_mesh.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     if results.multi_face_landmarks:
         for face_landmarks in results.multi_face_landmarks:
-        #   landmarks = extract_points_of_interest(face_landmarks.landmark)
-            landmarks = np.array([[lmk.x, lmk.y, lmk.z] for lmk in face_landmarks.landmark]).flatten()
+            landmarks = extract_points_of_interest(face_landmarks.landmark)
+            #landmarks = np.array([[lmk.x, lmk.y, lmk.z] for lmk in face_landmarks.landmark]).flatten()
 
             print("Shape dos dados de entrada:", landmarks.shape)  # Verifica o shape dos dados
-            print("Dados de entrada:", landmarks)  # Imprime os dados para verificação
+            print("Dados de entrada:\n", landmarks)  # Imprime os dados para verificação
 
             # Verificar se landmarks foram detectados
         if landmarks.shape[0] > 0:
             # Normalizar os landmarks
-            landmarks = landmarks.reshape(1, -1)  # Transforma em formato de linha para compatibilidade com StandardScaler
+            #landmarks = landmarks.reshape(1, -1)  # Transforma em formato de linha para compatibilidade com StandardScaler
             scaler = StandardScaler()
             landmarks_scaled = scaler.fit_transform(landmarks)
             
-            # Fazer a predição com o modelo LDA
-            emotion = lda.predict(landmarks_scaled)
-            
+            #Normalizar os landmarks
+            scaler = StandardScaler()
+            landmarks_scaled = scaler.fit_transform(landmarks)
+            print("Landmarks scaled:", landmarks_scaled)
             
             # Fazer a predição com o modelo LDA
             try:
                 emotion = lda.predict(landmarks_scaled)
+                print(emotion)
                 # Retornar a emoção prevista
-                return {"emotion": int(emotion[0])}
+                emotion_name = list(emotion_to_num.keys())[emotion[0]]
+                return {"emotion": emotion_name}
             except ValueError as e:
                 return {"error": f"Erro na predição: {str(e)}"}
     return {"error": "No face detected"}
