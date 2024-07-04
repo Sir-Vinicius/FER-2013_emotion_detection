@@ -1,5 +1,7 @@
 .ipynb_checkpoints
 archive
+.venv
+__pycache__
 
-test_landmarks.parquet
-train_landmarks.parquet
+landmarks_balanced.parquet
+lda_model.pkl

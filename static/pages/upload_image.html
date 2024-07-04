@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Image</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <h1>Upload an Image</h1>
+    <form id="upload-form" action="/predict" method="post" enctype="multipart/form-data">
+        <input type="file" id="file-input" name="file" accept=".jpg, .jpeg, .png" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    <div id="image-preview"></div>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            var fileInput = document.getElementById('file-input');
+            var imagePreview = document.getElementById('image-preview');
+            var resultDiv = document.getElementById('result');
+
+            if (fileInput.files.length === 0) {
+                alert('Please select an image file.');
+                return;
+            }
+
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+
+            reader.onload = function(event) {
+                var imageUrl = event.target.result;
+                imagePreview.innerHTML = `<img src="${imageUrl}" style="max-width: 100%;">`;
+                resultDiv.innerHTML = '<p>Detecting emotion...</p>';
+
+                // Optionally, you can send the image file to the server for prediction here
+                var formData = new FormData();
+                formData.append('file', file);
+
+                
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    var emotion = data.emotion;
+                    resultDiv.innerHTML = `<p>Detected emotion: ${emotion}</p>`;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultDiv.innerHTML = '<p>Error detecting emotion.</p>';
+                });
+
+            };
+
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
