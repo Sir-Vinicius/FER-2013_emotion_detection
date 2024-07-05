@@ -37,23 +37,8 @@
                 imagePreview.innerHTML = `<img src="${imageUrl}" style="max-width: 100%;">`;
                 resultDiv.innerHTML = '<p>Detecting emotion...</p>';
 
-                // Optionally, you can send the image file to the server for prediction here
                 var formData = new FormData();
                 formData.append('file', file);
-
-                // Função de mapeamento de emoções
-                function mapEmotionName(emotionNumber) {
-                    const emotionMap = {
-                    0: 'angry',
-                    1: 'sad',
-                    2: 'surprise',
-                    3: 'happy'
-                    };
-                    
-                    return emotionMap[emotionNumber];
-                }
-  
-
 
                 fetch('/predict-image', {
                     method: 'POST',
@@ -73,9 +58,6 @@
                     console.error('Error:', error);
                     resultDiv.innerHTML = '<p>Error detecting emotion.</p>';
                 });
-                
-                  
-
             };
 
             reader.readAsDataURL(file);

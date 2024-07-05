@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -97,7 +97,36 @@ async def upload_image(file: UploadFile = File(...)):
             except ValueError as e:
                 return {"error": f"Erro na predição: {str(e)}"}
     return {"error": "No face detected"}
-# Endpoint para capturar frames da webcam (a ser implementado!!!!)
+
+# Endpoint WebSocket
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            npimg = np.frombuffer(data, np.uint8)
+            img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+            results = mp_face_mesh.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+            if results.multi_face_landmarks:
+                for face_landmarks in results.multi_face_landmarks:
+                    landmarks = extract_points_of_interest(face_landmarks.landmark)
+                    if landmarks.shape[0] > 0:
+                        scaler = StandardScaler()
+                        landmarks_scaled = scaler.fit_transform(landmarks)
+                        try:
+                            emotion = lda.predict(landmarks_scaled)
+                            emotion_name = list(emotion_to_num.keys())[emotion[0]]
+                            await websocket.send_text(emotion_name)
+                        except ValueError as e:
+                            await websocket.send_text(f"Erro na predição: {str(e)}")
+                    else:
+                        await websocket.send_text("No face detected")
+            else:
+                await websocket.send_text("No face detected")
+    except Exception as e:
+        await websocket.close()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

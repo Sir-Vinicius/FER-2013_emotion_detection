@@ -2,10 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Use Webcam</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Emotion Detection</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <h1>Use Webcam for Emotion Detection</h1>
-    <p>This feature will be implemented in the next steps.</p>
+    <h1>Webcam Emotion Detection</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <div id="result"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const resultDiv = document.getElementById('result');
+
+        // Solicitar permissão para acessar a webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error('Error accessing webcam:', err);
+            });
+
+        // Conectar ao WebSocket
+        const socket = new WebSocket('ws://localhost:8000/ws');
+
+        socket.onmessage = function(event) {
+            resultDiv.innerHTML = `<p>Detected emotion: ${event.data}</p>`;
+        };
+
+        // Enviar frames da webcam para o servidor
+        function sendFrame() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+                if (blob) {
+                    socket.send(blob);
+                }
+            }, 'image/jpeg');
+        }
+
+        // Enviar frames em intervalos regulares
+        setInterval(sendFrame, 1000); // Ajuste o intervalo conforme necessário
+    </script>
 </body>
 </html>
