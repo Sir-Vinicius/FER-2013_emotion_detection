@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, WebSocket
+from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import mediapipe as mp
 from sklearn.preprocessing import StandardScaler
+
 
 # Carregar o modelo LDA treinado
 model_path = '/home/viniciuss/Documents/projetos/FER-2013_emotion_detection/lda_model.pkl'
@@ -56,8 +57,9 @@ emotion_to_num = {'angry': 0, 'sad': 1, 'surprise': 2, 'happy': 3}
 async def read_root():
     file_path = os.path.join(os.getcwd(), "static", "pages", "index.html")
     with open(file_path) as f:
-        return HTMLResponse(content=f.read(), status_code=200)
-
+        response = HTMLResponse(content=f.read(), status_code=200)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 # Endpoint para upload de imagem
 @app.post("/predict-image/")
 async def upload_image(file: UploadFile = File(...)):
@@ -98,35 +100,36 @@ async def upload_image(file: UploadFile = File(...)):
                 return {"error": f"Erro na predição: {str(e)}"}
     return {"error": "No face detected"}
 
-# Endpoint WebSocket
+# Endpoint Webcam
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    
+
+    # Inicializar a webcam
+    cap = cv2.VideoCapture(0)
+
     try:
         while True:
-            data = await websocket.receive_bytes()
-            npimg = np.frombuffer(data, np.uint8)
-            img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-            results = mp_face_mesh.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-            if results.multi_face_landmarks:
-                for face_landmarks in results.multi_face_landmarks:
-                    landmarks = extract_points_of_interest(face_landmarks.landmark)
-                    if landmarks.shape[0] > 0:
-                        scaler = StandardScaler()
-                        landmarks_scaled = scaler.fit_transform(landmarks)
-                        try:
-                            emotion = lda.predict(landmarks_scaled)
-                            emotion_name = list(emotion_to_num.keys())[emotion[0]]
-                            await websocket.send_text(emotion_name)
-                        except ValueError as e:
-                            await websocket.send_text(f"Erro na predição: {str(e)}")
-                    else:
-                        await websocket.send_text("No face detected")
-            else:
-                await websocket.send_text("No face detected")
+            # Capturar um frame da webcam
+            ret, frame = cap.read()
+
+            if not ret:
+                print("Erro ao capturar o frame.")
+                continue
+
+            # Converter o frame para JPEG
+            _, jpeg = cv2.imencode('.jpg', frame)
+
+            # Enviar o frame para o cliente via WebSocket
+            await websocket.send_bytes(jpeg.tobytes())
+
+    except WebSocketDisconnect:
+        cap.release()
+        cv2.destroyAllWindows()
     except Exception as e:
-        await websocket.close()
+        print(f"Erro no WebSocket: {str(e)}")
+        cap.release()
+        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

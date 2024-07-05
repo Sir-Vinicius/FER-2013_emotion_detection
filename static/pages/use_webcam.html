@@ -3,50 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam Emotion Detection</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <title>Webcam</title>
+    <style>
+        #webcam-video {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 320px;
+            height: 240px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Webcam Emotion Detection</h1>
-    <video id="video" width="640" height="480" autoplay></video>
-    <div id="result"></div>
+    <h1>Webcam</h1>
+    <video id="webcam-video" autoplay></video>
 
     <script>
-        const video = document.getElementById('video');
-        const resultDiv = document.getElementById('result');
-
-        // Solicitar permissão para acessar a webcam
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                video.srcObject = stream;
-            })
-            .catch(err => {
-                console.error('Error accessing webcam:', err);
-            });
+        const video = document.getElementById('webcam-video');
 
         // Conectar ao WebSocket
         const socket = new WebSocket('ws://localhost:8000/ws');
 
         socket.onmessage = function(event) {
-            resultDiv.innerHTML = `<p>Detected emotion: ${event.data}</p>`;
+            const blob = new Blob([event.data], { type: 'image/jpeg' });
+            video.src = URL.createObjectURL(blob);
         };
 
-        // Enviar frames da webcam para o servidor
-        function sendFrame() {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext('2d');
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(blob => {
-                if (blob) {
-                    socket.send(blob);
-                }
-            }, 'image/jpeg');
-        }
+        socket.onerror = function(event) {
+            console.error('WebSocket error:', event);
+        };
 
-        // Enviar frames em intervalos regulares
-        setInterval(sendFrame, 1000); // Ajuste o intervalo conforme necessário
+        socket.onclose = function(event) {
+            console.log('WebSocket connection closed:', event);
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Solicitar permissão para acessar a webcam
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error('Error accessing webcam:', err);
+                });
+        });
     </script>
 </body>
 </html>
