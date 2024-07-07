@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 
 
 # Carregar o modelo LDA treinado
-model_path = '/home/viniciuss/Documents/projetos/FER-2013_emotion_detection/lda_model.pkl'
+model_path = '/home/viniciuss/Documents/projetos/FER-2013_emotion_detection/svc_model.pkl'
 with open(model_path, 'rb') as file:
     lda = pickle.load(file)
 
@@ -81,17 +81,13 @@ async def upload_image(file: UploadFile = File(...)):
         if landmarks.shape[0] > 0:
             # Normalizar os landmarks
             #landmarks = landmarks.reshape(1, -1)  # Transforma em formato de linha para compatibilidade com StandardScaler
-            scaler = StandardScaler()
-            landmarks_scaled = scaler.fit_transform(landmarks)
-            
-            #Normalizar os landmarks
-            scaler = StandardScaler()
-            landmarks_scaled = scaler.fit_transform(landmarks)
-            print("Landmarks scaled:", landmarks_scaled)
+            #scaler = StandardScaler()
+            #landmarks_scaled = scaler.fit_transform(landmarks)
+            #print("Landmarks scaled:", landmarks_scaled)
             
             # Fazer a predição com o modelo LDA
             try:
-                emotion = lda.predict(landmarks_scaled)
+                emotion = lda.predict(landmarks)
                 print(emotion)
                 # Retornar a emoção prevista
                 emotion_name = list(emotion_to_num.keys())[emotion[0]]

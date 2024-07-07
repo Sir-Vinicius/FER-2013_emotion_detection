@@ -5,3 +5,5 @@ __pycache__
 
 landmarks_balanced.parquet
 lda_model.pkl
+rfc_model.pkl
+svc_model.pkl
